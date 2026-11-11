@@ -22,6 +22,20 @@ describe("parseWingman", () => {
     expect(r.scenes.map((s) => s.mapId)).toEqual(["ascent", "summit", "summit", "corrode", "free"]);
   });
 
+  it("keeps each ability's own size, ring and line from the file", () => {
+    const abilities = parse(sample)
+      .scenes.flatMap((s) => s.elements)
+      .filter((e) => e.type === "ability");
+    const get = (id: string) => abilities.find((e) => e.abilityId === id);
+    expect(get("rendezvous")).toMatchObject({ radius: 85, iconSize: 25, scale: 1.1 }); // ring shown
+    expect(get("trademark")?.radius).toBeNull(); // withRadius is false: no ring
+    expect(get("dark_cover")?.radius).toBeNull();
+    expect(get("recon_bolt")?.radius).toBeNull(); // radius 0: no permanent ring
+    expect(get("recon_bolt")?.radiusHover).toBe(130); // shown on hover only
+    expect(get("toxic_screen")?.line).toHaveLength(2);
+    expect(get("toxic_screen")?.scale).toBeCloseTo(1.095, 2);
+  });
+
   it("reports a shared map id", () => {
     const r = parse(gz(file([scene([]), scene([])])));
     expect(r.result.mapId).toBe("ascent");

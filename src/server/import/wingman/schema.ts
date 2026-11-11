@@ -17,12 +17,26 @@ const character = z.object({
   coneAngle: num.nullish(),
   ...common,
 });
+// Rendering hints stored on each ability; a malformed block degrades to defaults.
+const abilityAttributes = z
+  .object({
+    iconSize: num.min(1).max(500).nullish(),
+    radius: num.min(0).max(5000).nullish(),
+    radiusHover: num.min(0).max(5000).nullish(),
+  })
+  .catch({});
 const ability = z.object({
   type: z.literal("ability"),
   characterId: id,
   abilityId: id.nullish(),
   rotation: num.default(0),
   color: z.string().max(40).nullish(),
+  withRadius: z.boolean().default(false),
+  useAltIcon: z.boolean().nullish(),
+  drawScale: num.min(0.1).max(10).nullish(),
+  iconT: num.min(0).max(1).nullish(),
+  points: z.array(point).max(MAX_POINTS).nullish(),
+  attributes: abilityAttributes.default({}),
   ...common,
 });
 const strokeShape = z.object({
