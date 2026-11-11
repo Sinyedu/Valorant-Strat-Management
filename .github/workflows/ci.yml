@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # mongo:8 refuses to start on kernels >= 6.19 (SERVER-121912), which ubuntu-latest now has
     timeout-minutes: 10
     # Local MongoDB in Docker: fast and independent of Atlas.
     services:
