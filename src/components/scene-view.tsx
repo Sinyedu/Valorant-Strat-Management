@@ -1,3 +1,4 @@
+import { agentIconSrc } from "@/lib/agents";
 import { MAP_BACKGROUNDS, type MapBackground } from "@/lib/map-backgrounds";
 import type { SceneDto, SceneElement, ScenePoint } from "@/types/scene";
 
@@ -60,13 +61,19 @@ function Element({ e }: { e: SceneElement }) {
     }
     case "character": {
       const rad = ((e.rotation - 90) * Math.PI) / 180;
+      const icon = agentIconSrc(e.characterId);
       return (
         <g>
-          <circle cx={e.x} cy={e.y} r={15} fill="#1f2937" stroke={INK} strokeWidth={2} />
-          <line x1={e.x} y1={e.y} x2={e.x + 22 * Math.cos(rad)} y2={e.y + 22 * Math.sin(rad)} stroke={INK} strokeWidth={2} />
-          <text x={e.x} y={e.y + 4} textAnchor="middle" fontSize={11} fill={INK}>
-            {e.characterId.slice(0, 2).toUpperCase()}
-          </text>
+          <circle cx={e.x} cy={e.y} r={15} fill="#1f2937" />
+          {icon ? (
+            <image href={icon} x={e.x - 15} y={e.y - 15} width={30} height={30} clipPath="url(#agent-clip)" />
+          ) : (
+            <text x={e.x} y={e.y + 4} textAnchor="middle" fontSize={11} fill={INK}>
+              {e.characterId.slice(0, 2).toUpperCase()}
+            </text>
+          )}
+          <circle cx={e.x} cy={e.y} r={15} fill="none" stroke={INK} strokeWidth={2} />
+          <line x1={e.x + 15 * Math.cos(rad)} y1={e.y + 15 * Math.sin(rad)} x2={e.x + 22 * Math.cos(rad)} y2={e.y + 22 * Math.sin(rad)} stroke={INK} strokeWidth={2} />
         </g>
       );
     }
@@ -104,6 +111,11 @@ export function SceneView({ scene, label }: { scene: SceneDto; label: string }) 
   return (
     <figure className="m-0">
       <svg role="img" aria-label={label} viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`} className="mx-auto max-h-[75vh] w-full bg-[#0d1822]">
+        <defs>
+          <clipPath id="agent-clip" clipPathUnits="objectBoundingBox">
+            <circle cx={0.5} cy={0.5} r={0.5} />
+          </clipPath>
+        </defs>
         {bg && <image href={bg.src} x={0} y={0} width={bg.width} height={bg.height} />}
         <g transform={bg ? `translate(${bg.offsetX} ${bg.offsetY}) scale(${bg.scale})` : undefined}>
           {scene.elements.map((e, i) => (
