@@ -1,7 +1,7 @@
 import { gunzipSync } from "node:zlib";
 import { safeDisplayName, titleFromFilename } from "@/server/import/filename";
 import { ImportError, type ImportResult } from "@/server/import/types";
-import type { SceneDto, SceneElement } from "@/types/scene";
+import { DEFAULT_DRAW_SCALE, type SceneDto, type SceneElement } from "@/types/scene";
 import { wingmanFile } from "./schema";
 
 export const MAX_MAP_BYTES = 5 * 1024 * 1024;
@@ -41,7 +41,23 @@ function normalizeScene(s: Parsed): SceneDto {
     } else if (e.type === "character") {
       elements.push({ type: "character", characterId: e.characterId, x: e.x, y: e.y, rotation: e.rotation, coneAngle: e.coneAngle ?? null });
     } else if (e.type === "ability") {
-      elements.push({ type: "ability", characterId: e.characterId, abilityId: e.abilityId ?? null, x: e.x, y: e.y, rotation: e.rotation, color: color(e.color) });
+      const radius = e.attributes.radius ?? 0;
+      elements.push({
+        type: "ability",
+        characterId: e.characterId,
+        abilityId: e.abilityId ?? null,
+        x: e.x,
+        y: e.y,
+        rotation: e.rotation,
+        color: color(e.color),
+        altIcon: e.useAltIcon === true,
+        scale: e.drawScale ?? DEFAULT_DRAW_SCALE,
+        iconSize: e.attributes.iconSize ?? null,
+        radius: e.withRadius && radius > 0 ? radius : null,
+        radiusHover: (e.attributes.radiusHover ?? 0) > 0 ? e.attributes.radiusHover : null,
+        line: e.points && e.points.length >= 2 ? e.points : null,
+        iconT: e.iconT ?? null,
+      });
     } else if (e.type === "pen" || e.type === "freehand") {
       elements.push({ type: e.type, points: e.points, color: color(e.color), closed: e.closed, dotted: e.dotted, arrowEnd: e.arrowEnd });
     } else if (e.type === "text") {

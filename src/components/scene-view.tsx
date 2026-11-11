@@ -1,12 +1,23 @@
+import { abilityIconSrc } from "@/lib/abilities";
+import { agentColor } from "@/lib/agent-colors";
 import { agentIconSrc } from "@/lib/agents";
 import { MAP_BACKGROUNDS, type MapBackground } from "@/lib/map-backgrounds";
-import type { SceneDto, SceneElement, ScenePoint } from "@/types/scene";
+import { DEFAULT_DRAW_SCALE, type SceneDto, type SceneElement, type ScenePoint } from "@/types/scene";
 
 const PAD = 40;
 const INK = "#e5e7eb";
+const CHAR_R = 15 * DEFAULT_DRAW_SCALE; // character size 15, drawn at Wingman's default scale
 
 function bounds(els: SceneElement[]) {
-  const pts: ScenePoint[] = els.flatMap((e) => ("points" in e ? e.points : [{ x: e.x, y: e.y }]));
+  const pts: ScenePoint[] = els.flatMap((e) => {
+    if ("points" in e) return e.points;
+    if (e.type === "ability") {
+      const r = (e.radius ?? 0) * (e.scale ?? DEFAULT_DRAW_SCALE);
+      const own = [{ x: e.x, y: e.y }, ...(e.line ?? [])];
+      return r > 0 ? [...own, { x: e.x - r, y: e.y - r }, { x: e.x + r, y: e.y + r }] : own;
+    }
+    return [{ x: e.x, y: e.y }];
+  });
   if (pts.length === 0) return { x: 0, y: 0, w: 400, h: 300 };
   const xs = pts.map((p) => p.x);
   const ys = pts.map((p) => p.y);
@@ -24,6 +35,12 @@ function fitToBackground(bg: MapBackground, els: SceneElement[]) {
   const y1 = Math.max(bg.crop.y + bg.crop.h, bg.scale * (e.y + e.h) + bg.offsetY);
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
+
+const DEFAULT_ABILITY_COLOR = "#7a9cff";
+const outlineId = (c: string) => `ability-outline-${c.replace("#", "")}`;
+const outlineColors = (els: SceneElement[]) => [
+  ...new Set(els.flatMap((e) => (e.type === "ability" ? [e.color ?? DEFAULT_ABILITY_COLOR] : []))),
+];
 
 const path = (pts: ScenePoint[], closed: boolean) =>
   pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + (closed ? " Z" : "");
@@ -62,29 +79,55 @@ function Element({ e }: { e: SceneElement }) {
     case "character": {
       const rad = ((e.rotation - 90) * Math.PI) / 180;
       const icon = agentIconSrc(e.characterId);
+      const accent = agentColor(e.characterId) ?? INK;
       return (
         <g>
-          <circle cx={e.x} cy={e.y} r={15} fill="#1f2937" />
+          <circle cx={e.x} cy={e.y} r={CHAR_R} fill="#1f2937" />
           {icon ? (
-            <image href={icon} x={e.x - 15} y={e.y - 15} width={30} height={30} clipPath="url(#agent-clip)" />
+            <image href={icon} x={e.x - CHAR_R} y={e.y - CHAR_R} width={CHAR_R * 2} height={CHAR_R * 2} clipPath="url(#agent-clip)" />
           ) : (
             <text x={e.x} y={e.y + 4} textAnchor="middle" fontSize={11} fill={INK}>
               {e.characterId.slice(0, 2).toUpperCase()}
             </text>
           )}
-          <circle cx={e.x} cy={e.y} r={15} fill="none" stroke={INK} strokeWidth={2} />
-          <line x1={e.x + 15 * Math.cos(rad)} y1={e.y + 15 * Math.sin(rad)} x2={e.x + 22 * Math.cos(rad)} y2={e.y + 22 * Math.sin(rad)} stroke={INK} strokeWidth={2} />
+          <circle cx={e.x} cy={e.y} r={CHAR_R} fill="none" stroke={accent} strokeWidth={3} />
+          <line x1={e.x + CHAR_R * Math.cos(rad)} y1={e.y + CHAR_R * Math.sin(rad)} x2={e.x + (CHAR_R + 7) * Math.cos(rad)} y2={e.y + (CHAR_R + 7) * Math.sin(rad)} stroke={accent} strokeWidth={3} />
         </g>
       );
     }
     case "ability": {
-      const c = e.color ?? "#7a9cff";
+      const c = e.color ?? DEFAULT_ABILITY_COLOR;
+      const k = e.scale ?? DEFAULT_DRAW_SCALE;
+      const size = (e.iconSize ?? 24) * k; // icon diameter
+      const t = e.iconT ?? 0.5;
+      const [a, b] = e.line ? [e.line[0], e.line[e.line.length - 1]] : [null, null];
+      const ix = a && b ? a.x + (b.x - a.x) * t : e.x;
+      const iy = a && b ? a.y + (b.y - a.y) * t : e.y;
+      const half = size / 2 / Math.SQRT2;
+      const icon = abilityIconSrc(e.characterId, e.abilityId, e.altIcon);
+      const name = (e.abilityId ?? e.characterId).replaceAll("_", " ");
       return (
-        <g>
-          <rect x={e.x - 9} y={e.y - 9} width={18} height={18} transform={`rotate(45 ${e.x} ${e.y})`} fill={c} fillOpacity={0.35} stroke={c} strokeWidth={2} />
-          <text x={e.x} y={e.y + 26} textAnchor="middle" fontSize={10} fill={INK}>
-            {(e.abilityId ?? e.characterId).replaceAll("_", " ")}
-          </text>
+        <g className="group">
+          <title>{name}</title>
+          {e.radiusHover ? (
+            <circle cx={e.x} cy={e.y} r={e.radiusHover * k} fill={c} fillOpacity={0.06} stroke={c} strokeWidth={2} className="pointer-events-none opacity-0 transition-opacity group-hover:opacity-100" />
+          ) : null}
+          {e.radius ? (
+            <circle cx={e.x} cy={e.y} r={e.radius * k} fill={c} fillOpacity={0.1} stroke={c} strokeWidth={2} />
+          ) : null}
+          {e.line ? (
+            <path d={path(e.line, false)} fill="none" stroke={c} strokeWidth={4} strokeOpacity={0.7} strokeLinecap="round" />
+          ) : null}
+          {icon ? (
+            <image href={icon} x={ix - size / 2} y={iy - size / 2} width={size} height={size} filter={`url(#${outlineId(c)})`} />
+          ) : (
+            <>
+              <rect x={ix - half} y={iy - half} width={half * 2} height={half * 2} transform={`rotate(45 ${ix} ${iy})`} fill={c} fillOpacity={0.35} stroke={c} strokeWidth={2} />
+              <text x={ix} y={iy + size / 2 + 10} textAnchor="middle" fontSize={10} fill={INK}>
+                {name}
+              </text>
+            </>
+          )}
         </g>
       );
     }
@@ -95,7 +138,7 @@ function Element({ e }: { e: SceneElement }) {
         </text>
       );
     case "bomb":
-      return <rect x={e.x - 8} y={e.y - 8} width={16} height={16} fill="#facc15" stroke="#000" strokeWidth={2} />;
+      return <image href="/game/spike.webp" x={e.x - 14} y={e.y - 14} width={28} height={28} />;
   }
 }
 
@@ -112,6 +155,18 @@ export function SceneView({ scene, label }: { scene: SceneDto; label: string }) 
     <figure className="m-0">
       <svg role="img" aria-label={label} viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`} className="mx-auto max-h-[75vh] w-full bg-[#0d1822]">
         <defs>
+          {/* Ability glyphs are white; Wingman outlines them in the ability's own color. */}
+          {outlineColors(scene.elements).map((c) => (
+            <filter key={c} id={outlineId(c)} x="-20%" y="-20%" width="140%" height="140%">
+              <feMorphology in="SourceAlpha" operator="dilate" radius="2" result="grown" />
+              <feFlood floodColor={c} />
+              <feComposite in2="grown" operator="in" result="ring" />
+              <feMerge>
+                <feMergeNode in="ring" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          ))}
           <clipPath id="agent-clip" clipPathUnits="objectBoundingBox">
             <circle cx={0.5} cy={0.5} r={0.5} />
           </clipPath>
