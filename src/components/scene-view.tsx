@@ -1,3 +1,4 @@
+import { MAP_BACKGROUNDS, type MapBackground } from "@/lib/map-backgrounds";
 import type { SceneDto, SceneElement, ScenePoint } from "@/types/scene";
 
 const PAD = 40;
@@ -11,6 +12,16 @@ function bounds(els: SceneElement[]) {
   const x = Math.min(...xs) - PAD;
   const y = Math.min(...ys) - PAD;
   return { x, y, w: Math.max(...xs) + PAD - x, h: Math.max(...ys) + PAD - y };
+}
+
+/** The map's crop, grown if needed so elements placed off the map stay visible. */
+function fitToBackground(bg: MapBackground, els: SceneElement[]) {
+  const e = bounds(els); // file units, already padded
+  const x0 = Math.min(bg.crop.x, bg.scale * e.x + bg.offsetX);
+  const y0 = Math.min(bg.crop.y, bg.scale * e.y + bg.offsetY);
+  const x1 = Math.max(bg.crop.x + bg.crop.w, bg.scale * (e.x + e.w) + bg.offsetX);
+  const y1 = Math.max(bg.crop.y + bg.crop.h, bg.scale * (e.y + e.h) + bg.offsetY);
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
 const path = (pts: ScenePoint[], closed: boolean) =>
@@ -87,19 +98,25 @@ function Element({ e }: { e: SceneElement }) {
  * to each other, fitted to the scene's bounds.
  */
 export function SceneView({ scene, label }: { scene: SceneDto; label: string }) {
-  const b = bounds(scene.elements);
+  const bg = scene.mapId ? MAP_BACKGROUNDS[scene.mapId] : undefined;
   const skipped = scene.unsupported.reduce((n, u) => n + u.count, 0);
+  const view = bg ? fitToBackground(bg, scene.elements) : bounds(scene.elements);
   return (
     <figure className="m-0">
-      <svg role="img" aria-label={label} viewBox={`${b.x} ${b.y} ${b.w} ${b.h}`} className="mx-auto max-h-[75vh] w-full bg-[#111827]">
-        {scene.elements.map((e, i) => (
-          <Element key={i} e={e} />
-        ))}
+      <svg role="img" aria-label={label} viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`} className="mx-auto max-h-[75vh] w-full bg-[#0d1822]">
+        {bg && <image href={bg.src} x={0} y={0} width={bg.width} height={bg.height} />}
+        <g transform={bg ? `translate(${bg.offsetX} ${bg.offsetY}) scale(${bg.scale})` : undefined}>
+          {scene.elements.map((e, i) => (
+            <Element key={i} e={e} />
+          ))}
+        </g>
       </svg>
       <figcaption className="space-y-1 border-t border-border bg-surface p-2 text-xs text-muted">
         <p>
-          Map: {scene.mapId ?? "unknown"} · {scene.elements.length} elements shown. The map background is not
-          available yet, so positions are relative.
+          Map: {scene.mapId ?? "unknown"} · {scene.elements.length} elements shown.{" "}
+          {bg
+            ? `Drawn on the ${scene.mapId} map (${bg.note}).`
+            : "No verified background for this map yet, so positions are relative."}
         </p>
         {skipped > 0 && (
           <p>Not shown (unsupported): {scene.unsupported.map((u) => `${u.type} ×${u.count}`).join(", ")}</p>
