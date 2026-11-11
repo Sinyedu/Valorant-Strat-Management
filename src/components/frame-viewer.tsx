@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SceneView } from "@/components/scene-view";
 import type { FrameDto } from "@/types/strategy";
 
 export function FrameViewer({ frames }: { frames: FrameDto[] }) {
@@ -28,13 +29,17 @@ export function FrameViewer({ frames }: { frames: FrameDto[] }) {
   return (
     <section aria-label="Strategy frames">
       <div className="overflow-hidden rounded-lg border border-border bg-black">
-        {/* eslint-disable-next-line @next/next/no-img-element -- auth-protected route; the image optimizer would not carry the session cookie */}
-        <img
-          key={frame.id}
-          src={`/api/attachments/${frame.attachmentId}`}
-          alt={frame.name ?? `Frame ${index + 1}`}
-          className="mx-auto max-h-[75vh] w-auto max-w-full"
-        />
+        {frame.scene ? (
+          <SceneView key={frame.id} scene={frame.scene} label={frame.name ?? `Scene ${index + 1}`} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- auth-protected route; the image optimizer would not carry the session cookie
+          <img
+            key={frame.id}
+            src={`/api/attachments/${frame.attachmentId}`}
+            alt={frame.name ?? `Frame ${index + 1}`}
+            className="mx-auto max-h-[75vh] w-auto max-w-full"
+          />
+        )}
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
         <button type="button" onClick={prev} aria-disabled={index === 0} className={btn}>

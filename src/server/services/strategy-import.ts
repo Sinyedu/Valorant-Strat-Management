@@ -22,6 +22,14 @@ export type ImportInput = {
   files: { name: string; bytes: Uint8Array }[];
 };
 
+/** Connects and checks the destination folder belongs to the workspace. */
+export async function assertFolder(workspaceId: string, folderId: string | null): Promise<void> {
+  await connectToDatabase();
+  if (!folderId) return;
+  const ok = objectIdSchema.safeParse(folderId).success && (await Folder.exists({ _id: folderId, workspaceId }));
+  if (!ok) throw new ImportError("Folder not found");
+}
+
 async function createStrategy(
   workspaceId: string,
   folderId: string | null,
@@ -88,12 +96,7 @@ export async function importImages(workspaceId: string, input: ImportInput): Pro
   const source = input.source; // narrowed to an image source by the guard above
   const parsed = input.files.map(parseImage);
 
-  await connectToDatabase();
-  if (input.folderId) {
-    const ok = objectIdSchema.safeParse(input.folderId).success &&
-      (await Folder.exists({ _id: input.folderId, workspaceId }));
-    if (!ok) throw new ImportError("Folder not found");
-  }
+  await assertFolder(workspaceId, input.folderId);
 
   const groups = input.group ? [parsed] : parsed.map((p) => [p]);
   const created: string[] = [];

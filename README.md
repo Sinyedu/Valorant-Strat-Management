@@ -2,7 +2,7 @@
 
 A library and viewer for Valorant strategies exported from Wingman, TactiVal, and ValoPlant. It is **not** a strategy editor. See `AGENTS.md` and `CLAUDE.md` for requirements and conventions.
 
-**Status: Phase 3 (image upload).** Accounts, nested folders, and PNG/JPEG/WebP strategy upload are implemented: pick a source, choose files, preview thumbnails, save, then open, page through frames, rename, download the original, or delete. **Wingman `.map` import is not implemented yet** (the source is shown as coming soon), and there is no tagging, search, or map/side editing UI.
+**Status: Phase 4 (Wingman import, first slice).** Accounts, nested folders, and PNG/JPEG/WebP strategy upload are implemented: pick a source, choose files, preview thumbnails, save, then open, page through frames, rename, download the original, or delete. **Wingman `.map` import** decodes and validates the file and shows each scene as a static SVG (see below). There is no tagging, search, or map/side editing UI.
 
 ## Stack
 
@@ -56,6 +56,7 @@ If an Atlas `mongodb+srv://` URI fails with `querySrv ECONNREFUSED`, your DNS re
 - Originals are stored unchanged in private object storage (SHA-256 recorded); MongoDB holds only metadata and opaque object keys. Files are served only through `/api/attachments/[id]`, which checks the session and workspace.
 - Storage is **local disk** (`STORAGE_DIR`, default `./.storage`, git-ignored) behind the `FileStorage` interface. This is a development default: use an S3-compatible provider (and back it up) before real deployment.
 - Imports are all-or-nothing: on failure, created documents and stored files are removed. Strategies are created as `processing` and hidden until complete. A server crash mid-import can still leave orphaned files or `processing` documents; there is no automated reconciliation job yet.
+- **Wingman (.map)**: one file per import (max 5 MB; max 8 MB once decompressed), gzip + JSON `formatVersion` 2 only. The server validates the structure, keeps the original, and stores one frame per scene. Confirmed from the sample: `character`, `ability`, `pen`, `freehand`, `text`, and `bomb` elements. Any other element type is skipped and reported ("Not shown") rather than guessed. **Limitations:** the map artwork and Wingman's coordinate calibration are not verified, so scenes render on a plain background with positions relative to each other and abilities/agents as labelled markers, not Wingman's icons. Map id is saved on the strategy only when every scene agrees (the sample mixes maps); side is never inferred. The Wingman importer has fixture tests against `sample/`; the MongoDB integration test needs `MONGODB_TEST_URI`.
 - Deleting a folder is refused while it has subfolders or strategies.
 
 ## Accounts and security notes

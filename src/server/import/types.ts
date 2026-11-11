@@ -1,12 +1,12 @@
+import type { SceneDto } from "@/types/scene";
 import type { StrategySource } from "@/types/strategy";
 
-// Adapter contract from AGENTS.md. `previewData` stays `unknown` until the
-// Wingman scene format is verified and a validated schema exists.
+// Adapter contract from AGENTS.md. `previewData` is set for tactical scenes only.
 export type ImportedFrame = {
   name?: string;
   order: number;
   kind: "image" | "tactical-scene";
-  previewData?: unknown;
+  previewData?: SceneDto;
 };
 
 export type ImportResult = {

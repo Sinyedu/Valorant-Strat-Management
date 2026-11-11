@@ -7,6 +7,7 @@ import { getStorage } from "@/server/storage";
 import { objectIdSchema } from "@/lib/validation/folder";
 import { strategyTitleSchema } from "@/lib/validation/strategy";
 import { deleteStrategyData } from "./strategy-cleanup";
+import type { SceneDto } from "@/types/scene";
 import type { StrategyDetailDto, StrategyDto } from "@/types/strategy";
 
 export class StrategyError extends Error {}
@@ -73,6 +74,7 @@ export async function getStrategyDetail(
       order: f.order,
       name: f.name ?? null,
       attachmentId: String(f.attachmentId),
+      scene: (f.scene as SceneDto | undefined) ?? null,
     })),
     attachments: attachments.map((a) => ({
       id: String(a._id),
