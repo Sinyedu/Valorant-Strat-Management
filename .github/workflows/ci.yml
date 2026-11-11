@@ -12,9 +12,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# mongo:8 refuses to start on Linux kernels >= 6.19 (SERVER-121912), which
+# ubuntu-latest now has, so both jobs stay on ubuntu-22.04. The kernel is shared
+# with service containers, so this also applies to the e2e job's container.
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     # Local MongoDB in Docker: fast and independent of Atlas.
     services:
@@ -43,19 +46,41 @@ jobs:
           done
           echo "MongoDB did not start in time" >&2
           docker ps -a
+          for c in $(docker ps -aq); do docker logs --tail 50 "$c" || true; done
           exit 1
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - name: Install Playwright browser
-        run: pnpm exec playwright install --with-deps chromium
+
+  # Runs in parallel with `check`, inside the official Playwright image so the
+  # browser and its system libraries are preinstalled (no download or apt step).
+  # The image tag must match @playwright/test in pnpm-lock.yaml.
+  e2e:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.0-jammy
+      options: --ipc=host
+    services:
+      mongo:
+        image: mongo:8
+    env:
+      # Inside a job container, a service is reached by its name, not localhost.
+      # The DB name must contain "e2e": the tests refuse any other name.
+      E2E_MONGODB_URI: mongodb://mongo:27017/vsmp_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       - name: End-to-end and accessibility tests
         run: pnpm test:e2e
-        env:
-          # Throwaway database in the service container; the name must contain "e2e".
-          E2E_MONGODB_URI: mongodb://localhost:27017/vsmp_e2e
       - name: Upload Playwright traces
         if: failure()
         uses: actions/upload-artifact@v4

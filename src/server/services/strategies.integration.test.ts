@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -9,6 +10,7 @@ import { StrategyFrame } from "@/server/models/strategy-frame";
 import { getStorage } from "@/server/storage";
 import { createFolder, deleteFolder, listChildren } from "./folders";
 import { importImages, MAX_FILES_PER_IMPORT } from "./strategy-import";
+import { importWingman } from "./strategy-import-wingman";
 import {
   deleteStrategy,
   getAttachmentFile,
@@ -57,6 +59,24 @@ describe.skipIf(!testUri)("strategy import and access (MongoDB)", () => {
     expect(list.every((s) => s.source === "tactival" && s.mapId === null)).toBe(true);
   });
 
+  it("imports the Wingman sample as one strategy with a frame per scene", async () => {
+    const bytes = new Uint8Array(readFileSync(path.resolve("sample/tactical-map-2026-11-11.map")));
+    const id = await importWingman(wsA, { folderId: null, file: { name: "tactical-map-2026-11-11.map", bytes } });
+    const d = await getStrategyDetail(wsA, id);
+    expect(d?.strategy.source).toBe("wingman");
+    expect(d?.strategy.title).toBe("tactical-map-2026-11-11");
+    expect(d?.frames).toHaveLength(5);
+    expect(d?.frames.every((f) => f.scene && f.scene.elements.length > 0)).toBe(true);
+    const stored = await getAttachmentFile(wsA, d!.attachments[0].id);
+    expect(Array.from(stored!.bytes)).toEqual(Array.from(bytes));
+    await expect(
+      importWingman(wsA, { folderId: null, file: { name: "x.map", bytes: new Uint8Array([1, 2]) } }),
+    ).rejects.toThrow();
+    await expect(
+      importWingman(wsB, { folderId: new Types.ObjectId().toString(), file: { name: "a.map", bytes } }),
+    ).rejects.toThrow(/Folder not found/);
+  });
+
   it("groups images into one ordered strategy", async () => {
     const folder = await makeFolder("Grouped");
     const [id] = await importImages(wsA, {
@@ -93,7 +113,7 @@ describe.skipIf(!testUri)("strategy import and access (MongoDB)", () => {
     const bad = [
       { source: "tactival", files: [{ name: "a.png", bytes: new Uint8Array([1, 2, 3]) }] },
       { source: "tactival", files: [{ name: "a.png", bytes: new Uint8Array() }] },
-      { source: "wingman", files: [file("a.png")] },
+      { source: "wingman", files: [file("a.png")] }, // images are not a Wingman source
       { source: "nope", files: [file("a.png")] },
       { source: "tactival", files: [] },
       { source: "tactival", files: [file("ok.png"), { name: "x.txt", bytes: new Uint8Array([65]) }] },

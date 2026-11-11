@@ -8,6 +8,8 @@ const frameSchema = new Schema(
     kind: { type: String, enum: ["image", "tactical-scene"], required: true },
     attachmentId: { type: Schema.Types.ObjectId, ref: "StrategyAttachment", required: true },
     name: { type: String, trim: true, maxlength: 100 },
+    // Normalized SceneDto for tactical-scene frames (bounded by the importer: <= 8 MiB).
+    scene: { type: Schema.Types.Mixed },
   },
   { timestamps: true },
 );

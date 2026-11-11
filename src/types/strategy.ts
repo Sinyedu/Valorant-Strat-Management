@@ -1,3 +1,5 @@
+import type { SceneDto } from "./scene";
+
 export const STRATEGY_SOURCES = [
   "wingman",
   "tactival",
@@ -7,7 +9,7 @@ export const STRATEGY_SOURCES = [
 
 export type StrategySource = (typeof STRATEGY_SOURCES)[number];
 
-/** Sources that can be imported as plain images today (Wingman .map is Phase 4). */
+/** Sources that can be imported as plain images today (Wingman .map has its own importer). */
 export const IMAGE_SOURCES = ["tactival", "valoplant", "generic"] as const;
 
 export type StrategySide = "attack" | "defense";
@@ -28,6 +30,8 @@ export type FrameDto = {
   order: number;
   name: string | null;
   attachmentId: string;
+  /** Present for Wingman scenes; image frames render from the attachment. */
+  scene: SceneDto | null;
 };
 
 export type AttachmentDto = {

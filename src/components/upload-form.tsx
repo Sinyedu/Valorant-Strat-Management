@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { WingmanUpload } from "@/components/wingman-upload";
 
 const ACCEPT = ["image/png", "image/jpeg", "image/webp"];
 const MAX_FILES = 25;
@@ -13,11 +14,11 @@ const SOURCES = [
   { value: "tactival", label: "TactiVal (image)" },
   { value: "valoplant", label: "ValoPlant (image)" },
   { value: "generic", label: "Generic (image)" },
+  { value: "wingman", label: "Wingman (.map)" },
 ];
 
-export function UploadForm({ folderId }: { folderId: string | null }) {
+function ImageUpload({ folderId, source }: { folderId: string | null; source: string }) {
   const router = useRouter();
-  const [source, setSource] = useState("tactival");
   const [picked, setPicked] = useState<Picked[]>([]);
   const [group, setGroup] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,19 +80,8 @@ export function UploadForm({ folderId }: { folderId: string | null }) {
     }
   }
 
-  const field = "mt-1 rounded-md border border-field bg-background px-3 py-2 text-sm";
   return (
-    <div className="space-y-6">
-      <label className="block text-sm">
-        Source
-        <select value={source} onChange={(e) => setSource(e.target.value)} className={`${field} block`}>
-          {SOURCES.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-          <option disabled>Wingman (.map) — coming soon</option>
-        </select>
-      </label>
-
+    <>
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -158,6 +148,29 @@ export function UploadForm({ folderId }: { folderId: string | null }) {
             ? "Save strategy"
             : `Save ${picked.length} strategies`}
       </button>
+    </>
+  );
+}
+
+export function UploadForm({ folderId }: { folderId: string | null }) {
+  const [source, setSource] = useState("tactival");
+  const field = "mt-1 rounded-md border border-field bg-background px-3 py-2 text-sm";
+  return (
+    <div className="space-y-6">
+      <label className="block text-sm">
+        Source
+        <select value={source} onChange={(e) => setSource(e.target.value)} className={`${field} block`}>
+          {SOURCES.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+      </label>
+      {source === "wingman" ? (
+        <WingmanUpload folderId={folderId} />
+      ) : (
+        // key resets picked files when switching between image sources
+        <ImageUpload key={source} folderId={folderId} source={source} />
+      )}
     </div>
   );
 }
