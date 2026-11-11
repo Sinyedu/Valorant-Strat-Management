@@ -43,6 +43,7 @@ jobs:
           done
           echo "MongoDB did not start in time" >&2
           docker ps -a
+          for c in $(docker ps -aq); do docker logs --tail 50 "$c" || true; done
           exit 1
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
