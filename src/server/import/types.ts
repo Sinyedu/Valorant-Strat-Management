@@ -21,3 +21,6 @@ export interface ImportAdapter {
   /** Must validate content itself; the selected source is not proof of validity. */
   parse(file: { name: string; bytes: Uint8Array }): Promise<ImportResult>;
 }
+
+/** A user-correctable import problem (bad file, too large, unsupported source). */
+export class ImportError extends Error {}

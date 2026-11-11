@@ -12,11 +12,12 @@ type Props = {
 /** A form that shows the error returned by its server action. */
 export function ActionForm({ action, children, className }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
+  // Controls stay enabled while pending: disabling the focused submit button would
+  // drop keyboard focus to the page (WCAG 2.4.3). Progress is announced instead.
   return (
-    <form action={formAction} className={className}>
-      <fieldset disabled={pending} className="contents">
-        {children}
-      </fieldset>
+    <form action={formAction} className={className} aria-busy={pending}>
+      {children}
+      <p role="status" className="sr-only">{pending ? "Working…" : ""}</p>
       {state.error && (
         <p role="alert" className="mt-2 text-sm text-accent">
           {state.error}

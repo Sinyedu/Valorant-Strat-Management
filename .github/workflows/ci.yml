@@ -22,11 +22,6 @@ jobs:
         image: mongo:8
         ports:
           - 27017:27017
-        options: >-
-          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
     env:
       # DB name must contain "test": integration tests refuse any other name.
       MONGODB_TEST_URI: mongodb://localhost:27017/vsmp_test
@@ -37,8 +32,34 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Wait for MongoDB
+        run: |
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/27017) 2>/dev/null; then
+              echo "MongoDB is accepting connections"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MongoDB did not start in time" >&2
+          docker ps -a
+          exit 1
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end and accessibility tests
+        run: pnpm test:e2e
+        env:
+          # Throwaway database in the service container; the name must contain "e2e".
+          E2E_MONGODB_URI: mongodb://localhost:27017/vsmp_e2e
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          if-no-files-found: ignore

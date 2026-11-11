@@ -16,7 +16,7 @@ export default function FolderPage({
   params,
 }: PageProps<"/dashboard/folders/[folderId]">) {
   return (
-    <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+    <Suspense fallback={<p role="status" className="text-sm text-muted">Loading…</p>}>
       <FolderContent params={params} />
     </Suspense>
   );

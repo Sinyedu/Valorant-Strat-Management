@@ -2,7 +2,7 @@
 
 A library and viewer for Valorant strategies exported from Wingman, TactiVal, and ValoPlant. It is **not** a strategy editor. See `AGENTS.md` and `CLAUDE.md` for requirements and conventions.
 
-**Status: Phase 2 (accounts and folders).** Sign-up, log-in, a personal workspace per user, and nested folders (create, rename, move, delete) are implemented. Uploads, strategies, and importers are not implemented yet.
+**Status: Phase 3 (image upload).** Accounts, nested folders, and PNG/JPEG/WebP strategy upload are implemented: pick a source, choose files, preview thumbnails, save, then open, page through frames, rename, download the original, or delete. **Wingman `.map` import is not implemented yet** (the source is shown as coming soon), and there is no tagging, search, or map/side editing UI.
 
 ## Stack
 
@@ -39,6 +39,7 @@ Locally, the integration tests are skipped unless `MONGODB_TEST_URI` is set (for
 | ----------------- | ----------------------------------------------------------------------------------- |
 | `MONGODB_URI`     | MongoDB connection string, ideally ending in `/vsmp` (server-side only)             |
 | `AUTH_SECRET`     | Random secret that signs session tokens. Generate with `npx auth secret`            |
+| `STORAGE_DIR`     | Optional. Directory for uploaded files (default `./.storage`)                       |
 | `AUTH_TRUST_HOST` | `true` when running `pnpm start` yourself; only behind a host or proxy you control |
 
 ## Checking the database connection
@@ -46,6 +47,16 @@ Locally, the integration tests are skipped unless `MONGODB_TEST_URI` is set (for
 With `MONGODB_URI` set and MongoDB running, `GET /api/health` returns `200 {"database":"connected"}`; otherwise `503`.
 
 If an Atlas `mongodb+srv://` URI fails with `querySrv ECONNREFUSED`, your DNS resolver is refusing SRV lookups. Use Atlas's non-SRV `mongodb://host1,host2,host3/...` string instead (Connect → Drivers → older driver version), or switch your DNS to a public resolver.
+
+## Uploads
+
+- Sources with image upload: TactiVal, ValoPlant, Generic. TactiVal and ValoPlant are treated as plain image exports; no structured format is assumed.
+- Limits: PNG, JPEG, or WebP only, 10 MB each, 25 files per upload. File type is decided from the file signature, never from the extension or the browser-declared MIME type. SVG, GIF, and PDF are rejected.
+- Many images: one strategy per image by default, or tick "group" to make one multi-frame strategy. Titles come from filenames and can be renamed afterwards.
+- Originals are stored unchanged in private object storage (SHA-256 recorded); MongoDB holds only metadata and opaque object keys. Files are served only through `/api/attachments/[id]`, which checks the session and workspace.
+- Storage is **local disk** (`STORAGE_DIR`, default `./.storage`, git-ignored) behind the `FileStorage` interface. This is a development default: use an S3-compatible provider (and back it up) before real deployment.
+- Imports are all-or-nothing: on failure, created documents and stored files are removed. Strategies are created as `processing` and hidden until complete. A server crash mid-import can still leave orphaned files or `processing` documents; there is no automated reconciliation job yet.
+- Deleting a folder is refused while it has subfolders or strategies.
 
 ## Accounts and security notes
 
@@ -66,10 +77,10 @@ src/
   lib/validation/      Zod schemas
   server/              server-only code (guarded by `server-only`)
     db/                Mongoose connection
-    models/            Mongoose models (User, Workspace, Folder)
-    services/          business logic (auth, folders)
-    import/            import adapter contract (adapters come later)
-    storage/           file storage interface (provider not chosen)
+    models/            Mongoose models (User, Workspace, Folder, Strategy, StrategyAttachment, StrategyFrame)
+    services/          business logic (auth, folders, strategies, import)
+    import/            import adapter contract, image validation (Wingman adapter comes later)
+    storage/           FileStorage interface + local-disk implementation
   types/               shared TypeScript types and DTOs
 ```
 

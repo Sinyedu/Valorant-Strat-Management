@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HeroActions } from "@/components/hero-actions";
 
 const features = [
   {
@@ -28,12 +28,7 @@ export default function Home() {
         Stratbook stores, organizes, and displays strategies created in
         external tools. It is a library and viewer, not an editor.
       </p>
-      <Link
-        href="/dashboard"
-        className="mt-8 inline-block rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
-      >
-        Open dashboard
-      </Link>
+      <HeroActions />
       <div className="mt-20 grid gap-4 sm:grid-cols-3">
         {features.map((f) => (
           <div

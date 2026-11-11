@@ -3,7 +3,7 @@ import { ActionForm } from "@/components/action-form";
 import { loginAction, signupAction } from "@/app/auth-actions";
 
 const input =
-  "mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
+  "mt-1 w-full rounded-md border border-field bg-background px-3 py-2 text-sm";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const signup = mode === "signup";
@@ -38,7 +38,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             className={input}
           />
         </label>
-        <button className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60">
+        <button className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-background hover:brightness-110 disabled:opacity-60">
           {signup ? "Sign up" : "Log in"}
         </button>
       </ActionForm>

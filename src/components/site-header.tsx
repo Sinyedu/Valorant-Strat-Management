@@ -34,9 +34,9 @@ export function SiteHeader() {
     <header className="border-b border-border bg-surface/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="font-semibold tracking-tight">
-          <span className="text-accent">▲</span> Stratbook
+          <span aria-hidden="true" className="text-accent">▲</span> Stratbook
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
+        <nav aria-label="Main" className="flex items-center gap-1 text-sm">
           <Suspense fallback={null}>
             <AuthNav />
           </Suspense>

@@ -43,3 +43,13 @@ next-env.d.ts
 
 # credential dumps
 *credentials*.env
+
+# local uploaded files
+/.storage/
+
+# local Claude Code config and downloaded skills (not redistributed)
+/.claude/
+
+# playwright output
+/test-results/
+/playwright-report/

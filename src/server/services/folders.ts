@@ -1,6 +1,7 @@
 import "server-only";
 import { connectToDatabase } from "@/server/db/mongoose";
 import { Folder } from "@/server/models/folder";
+import { Strategy } from "@/server/models/strategy";
 import { wouldCreateCycle } from "./folder-tree";
 import { folderNameSchema, objectIdSchema } from "@/lib/validation/folder";
 import type { FolderDto } from "@/types/folder";
@@ -139,11 +140,15 @@ export async function moveFolder(
   }
 }
 
-/** Deletes an empty folder. Non-empty folders are refused until strategies exist and cascade rules are defined. */
+/** Deletes an empty folder (no subfolders, no strategies). Cascade deletes are not implemented. */
 export async function deleteFolder(workspaceId: string, id: string) {
   await connectToDatabase();
   await assertInWorkspace(workspaceId, id);
   if (await Folder.exists({ workspaceId, parentFolderId: id })) {
+    throw new FolderError("Folder is not empty");
+  }
+  // Includes in-progress imports: deleting under them would orphan the new strategy.
+  if (await Strategy.exists({ workspaceId, folderId: id })) {
     throw new FolderError("Folder is not empty");
   }
   await Folder.deleteOne({ _id: id, workspaceId });
