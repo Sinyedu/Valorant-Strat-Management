@@ -54,5 +54,6 @@ export const MAP_BACKGROUNDS: Record<string, MapBackground> = Object.fromEntries
   map("lotus", [692, 88, 1812, 1624], false),
   map("abyss", [748, 76, 1700, 1644], false),
   map("sunset", [816, 76, 1568, 1648], false),
-  // pearl and split are intentionally absent: the supplied images were identical.
+  map("pearl", [768, 68, 1716, 1664], false),
+  map("split", [724, 76, 1752, 1648], false),
 ]);
